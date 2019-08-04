@@ -12,14 +12,7 @@ mye_ni <- mye_raw %>%
   group_by(year, gender, age_5) %>% 
   summarise(count = sum(MYE))
 
+# Check sum
 nrow(mye_ni) == (19 * 2 * 48)
 
-as.data.frame(mye_ni)
-
-
 write(toJSON(mye_ni), '../data/mye_ni.json')
-
-mye_ni_split <- split(mye_ni[2:4], mye_ni$year)
-
-write(toJSON(mye_ni_split), '../data/mye_ni_split.json')
-
