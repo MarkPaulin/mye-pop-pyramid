@@ -1,2 +1,2 @@
 # mye-pop-pyramid
-Northern Ireland Mid-Year Population Estimates Interactive Population Pyramid
+Interactive population pyramid for the Northern Ireland Mid-Year Population Estimates.
