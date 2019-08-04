@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<style>
+		body {
+			font-family: sans-serif;
+		}
+		rect.M {
+			fill: #3388ee;
+			shape-rendering: crispEdges;
+		}
+		rect.F {
+			fill: #ff3366;
+			shape-rendering: crispEdges;
+		}
+		.grid line {
+			stroke: lightgrey;
+		}
+		.grid path {
+			stroke: none;
+		}
+		.axis.age path, .axis.population path {
+			stroke: none;
+		}
+	</style>
+	<script src="../d3/d3.js"></script>
+	<script src="https://unpkg.com/d3-simple-slider"></script>
+	<script>
+		function draw(data) {
+			'use strict';
+			var margin = {top: 10, right: 10, bottom: 10, left: 10},
+				width = 960 - margin.left - margin.right,
+				height = 500 - margin.top - margin.bottom,
+				gutter = 30,
+				pyramid_height = height - 105,
+				domain_age = [
+								'00-04', '05-09', '10-14', '15-19',
+								'20-24', '25-29', '30-34', '35-39',
+								'40-44', '45-49', '50-54', '55-59',
+								'60-64', '65-69', '70-74', '75-79',
+								'80-84', '85-89', '90+'
+							],						
+				domain_count = d3.extent(data, d => d.count),
+				domain_year = d3.extent(data, d => d.year),
+				cx = width / 2
+			
+			var svg = d3.select('body').append('svg')
+				.attr('width', width + margin.left + margin.right)
+				.attr('height', height + margin.top + margin.bottom)
+			  .append('g')
+				.attr('transform', 'translate(' + margin.top + ', ' + margin.top + ')');
+			
+			// age axis
+			var scale_age = d3.scaleBand()
+				.domain(domain_age.reverse())
+				.range([0, pyramid_height])
+				.paddingInner(0.1);
+			
+			var axis_age_left = d3.axisLeft()
+				.scale(scale_age)
+				.tickSize(0);
+							
+			var axis_age_svg = svg.append('g')
+				.attr('class', 'axis age')
+				.attr('transform', 'translate(' + (cx + gutter / 2 + 10) + ', 0)')
+				.call(axis_age_left);
+			
+			axis_age_svg.append('text')
+				.attr('dy', '.32em')
+				.text('Age');
+			
+			axis_age_svg.selectAll('text')
+				.attr('x', -gutter/2 - 10)
+				.style('text-anchor', 'middle');
+			
+			var axis_age_right = d3.axisRight()
+				.scale(scale_age)
+				.tickFormat(d => '')
+				.tickSize(0);
+			
+			svg.append('g')
+				.attr('class', 'axis age')
+				.attr('transform',
+					  'translate(' + (cx - gutter / 2 - 10) + ', 0)')
+				.call(axis_age_right);
+			
+			// population axes
+			var scale_count = d3.scaleLinear()
+				.domain(domain_count)
+				.range([0, 250]);
+			
+			// male
+			var scale_male = d3.scaleLinear()
+				.domain(domain_count.reverse())
+				.range([0, 250]);
+				
+			var axis_male = d3.axisBottom()
+				.scale(scale_male)
+				.ticks(5)
+				.tickSize(0);
+			
+			svg.append('g')
+				.attr('class', 'axis population male')
+				.attr('transform',
+					  'translate(' + (cx - 250 - gutter) + 
+							  ', ' + (pyramid_height + 5) + ')')
+				.call(axis_male);
+			
+			// female
+			var axis_female = d3.axisBottom()
+				.scale(scale_count)
+				.ticks(5)
+				.tickSize(0);
+			
+			svg.append('g')
+				.attr('class', 'axis population female')
+				.attr('transform',
+					  'translate(' + (cx + gutter) +
+							  ', ' + (pyramid_height + 5) + ')')
+				.call(axis_female);
+			
+			// gridlines for count
+			function make_male_gridlines() {
+				return d3.axisBottom(scale_male)
+					.ticks(5);
+			}
+			
+			function make_female_gridlines() {
+				return d3.axisBottom(scale_count)
+					.ticks(5);
+			}
+			
+			svg.append('g')
+				.attr('class', 'grid')
+				.attr('transform',
+					  'translate(' + (cx - 250 - gutter) + 
+							  ', ' + (pyramid_height + 5) + ')')
+				.call(make_male_gridlines()
+					.tickSize(-pyramid_height)
+					.tickFormat('')
+				);
+			
+			svg.append('g')
+				.attr('class', 'grid')
+				.attr('transform',
+					  'translate(' + (cx + gutter) +
+							  ', ' + (pyramid_height + 5) + ')')
+				.call(make_female_gridlines()
+					.tickSize(-pyramid_height)
+					.tickFormat('')
+				);
+			
+			// year axis
+			var scale_year = d3.scaleLinear()
+				.domain(domain_year)
+				.range([0, 400])
+				.clamp(true);
+			
+			var axis_year = d3.axisBottom()
+				.scale(scale_year)
+				.ticks(5)
+				.tickFormat(String);
+			
+			var svg_axis_year = svg.append('g')
+				.attr('class', 'axis year')
+				.attr('transform',
+					  'translate(' + (cx - 200) + ', ' + (pyramid_height + 85) + ')')
+				.call(axis_year);
+			
+			// add the bars
+			var bars = svg.append('g')
+				.attr('class', 'pyramid population');
+				
+			function draw_bars(current_year, animate) {
+				
+				var filtered_data = data.filter(function(d) {
+					return d.year === current_year;
+				});
+				
+				var	if_male = d => d.gender === 'M',
+					x_pos = d => {
+						return if_male(d)
+							? cx - gutter - scale_count(d.count)
+							: cx + gutter;
+					};
+				
+				var bar = bars.selectAll('.bar').data(filtered_data);
+				
+				bar.transition()
+					.duration(animate ? 400 : 0)
+					.attr('x', d => x_pos(d))
+					.attr('width', d => scale_count(d.count));
+				
+				
+				bar.exit()
+					.remove();
+				
+				
+				bar.enter().append('rect')
+					.attr('class', d => 'bar ' + d.gender)
+					.attr('height', scale_age.bandwidth())
+					.attr('width', d => scale_count(d.count))
+					.attr('x', d => x_pos(d))
+					.attr('y', d => scale_age(d.age_5));
+			}
+			
+			draw_bars(domain_year[1], false);
+			
+			var year_pointer = d3.symbol()
+				.type(d3.symbolTriangle)
+				.size('100');
+						
+			var handle = svg_axis_year.append('path')
+				.attr('d', year_pointer)
+				.attr('fill', 'lightgrey')
+				.attr('stroke', 'none')
+				.attr('transform',
+					  'translate(' + scale_year(2018) + ', -10) rotate(180)')
+			
+			handle.call(d3.drag().on('start', started));
+			
+			function started() {
+				var handle = d3.select(this).attr('stroke', 'black').classed('dragging', true);
+				
+				d3.event.on('drag', dragged).on('end', ended)
+				
+				function dragged() {
+					handle.attr('transform', 'translate(' + d3.event.x + ', -10) rotate(180)');
+					var new_year = Math.round(scale_year.invert(d3.event.x));
+					draw_bars(new_year, false);
+				}
+				
+				function ended() {
+					handle.attr('stroke', 'none').classed('dragging', false);
+					var new_year = Math.round(scale_year.invert(d3.event.x));
+					draw_bars(new_year, true);
+					handle.attr('transform', 'translate(' + scale_year(new_year) + ', -10) rotate(180)');
+				}		
+			}
+			
+			    
+		}
+	</script>
+</head>
+<body>
+	<script>
+		d3.json('data/mye_ni.json').then(draw);
+	</script>
+</body>
+
+</html>
