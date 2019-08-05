@@ -167,6 +167,12 @@
 					  'translate(' + (cx - 200) + ', ' + (pyramid_height + 85) + ')')
 				.call(axis_year);
 			
+			// label showing year and description
+			var svg_desc = svg.append('text')
+			  .attr('class', 'desc')
+			  .attr('transform',
+			        'translate(' + cx + ', ' + (pyramid_height + 50) + ')');
+			
 			// add the bars
 			var bars = svg.append('g')
 				.attr('class', 'pyramid population');
@@ -202,6 +208,11 @@
 					.attr('width', d => scale_count(d.count))
 					.attr('x', d => x_pos(d))
 					.attr('y', d => scale_age(d.age_5));
+				
+				var pop_total = d3.sum(filtered_data, d => d.count);
+				
+				svg_desc.text('In ' + current_year + ', the Northern Ireland population was ' + pop_total);
+			  
 			}
 			
 			draw_bars(domain_year[1], false);
