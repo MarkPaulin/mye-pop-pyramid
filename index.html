@@ -274,18 +274,6 @@
 				}		
 			}
 			
-			year_slider.on('click', move_handle);
-			
-			function move_handle() {
-				var new_pos = d3.event.x + 200 - cx - gutter/2;
-				var new_year = Math.round(scale_year.invert(new_pos));
-				handle.attr('transform', 'translate(' + scale_year(new_year) + ', -10) rotate(180)');
-				
-				draw_bars(new_year, true);
-				
-				handle.raise();	
-			};
-			
 			    
 		}
 	</script>
