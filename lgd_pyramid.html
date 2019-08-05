@@ -48,16 +48,44 @@
 								'40-44', '45-49', '50-54', '55-59',
 								'60-64', '65-69', '70-74', '75-79',
 								'80-84', '85-89', '90+'
-							],						
-				domain_count = d3.extent(data, d => d.count),
+							],
 				domain_year = d3.extent(data, d => d.year),
-				cx = width / 2
+				cx = width / 2,
+				domain_lgd = [
+								{'area_name': 'Northern Ireland'},
+								{'area_name': 'Antrim and Newonabbey'},
+								{'area_name': 'Ards and North Down'},
+								{'area_name': 'Armagh City and Banridge'},
+								{'area_name': 'Befast'},
+								{'area_name': 'Causeway Coast and Glens'},
+								{'area_name': 'Derry City and Strabane'},
+								{'area_name': 'Fermanagh and Omagh'},
+								{'area_name': 'Lisburn and Castlereagh'},
+								{'area_name': 'Mid and East Antrim'},
+								{'area_name': 'Mid Ulster'},
+								{'area_name': 'Newry, Mourne and Down'}
+							];
 			
+			console.log(domain_lgd, d => d.area_name.toLowerCase());	
+			
+			var selector = d3.select('body')
+				.append('select')
+				.attr('id', 'lgd_selector')
+				.selectAll('option')
+				.data(domain_lgd)
+				.enter()
+				.append('option')
+				.text(d => d.area_name)
+				.attr('value', d => d.area_name);
+						
 			var svg = d3.select('body').append('svg')
 				.attr('width', width + margin.left + margin.right)
 				.attr('height', height + margin.top + margin.bottom)
 			  .append('g')
 				.attr('transform', 'translate(' + margin.top + ', ' + margin.top + ')');
+			
+			// initiate scale_count for later
+			var scale_count;
 			
 			// age axis
 			var scale_age = d3.scaleBand()
@@ -93,72 +121,6 @@
 					  'translate(' + (cx - gutter / 2 - 10) + ', 0)')
 				.call(axis_age_right);
 			
-			// population axes
-			var scale_count = d3.scaleLinear()
-				.domain(domain_count)
-				.range([0, 250]);
-			
-			// male
-			var scale_male = d3.scaleLinear()
-				.domain(domain_count.reverse())
-				.range([0, 250]);
-				
-			var axis_male = d3.axisBottom()
-				.scale(scale_male)
-				.ticks(5)
-				.tickSize(0);
-			
-			svg.append('g')
-				.attr('class', 'axis population male')
-				.attr('transform',
-					  'translate(' + (cx - 250 - gutter) + 
-							  ', ' + (pyramid_height + 5) + ')')
-				.call(axis_male);
-			
-			// female
-			var axis_female = d3.axisBottom()
-				.scale(scale_count)
-				.ticks(5)
-				.tickSize(0);
-			
-			svg.append('g')
-				.attr('class', 'axis population female')
-				.attr('transform',
-					  'translate(' + (cx + gutter) +
-							  ', ' + (pyramid_height + 5) + ')')
-				.call(axis_female);
-			
-			// gridlines for count
-			function make_male_gridlines() {
-				return d3.axisBottom(scale_male)
-					.ticks(5);
-			}
-			
-			function make_female_gridlines() {
-				return d3.axisBottom(scale_count)
-					.ticks(5);
-			}
-			
-			svg.append('g')
-				.attr('class', 'grid')
-				.attr('transform',
-					  'translate(' + (cx - 250 - gutter) + 
-							  ', ' + (pyramid_height + 5) + ')')
-				.call(make_male_gridlines()
-					.tickSize(-pyramid_height)
-					.tickFormat('')
-				);
-			
-			svg.append('g')
-				.attr('class', 'grid')
-				.attr('transform',
-					  'translate(' + (cx + gutter) +
-							  ', ' + (pyramid_height + 5) + ')')
-				.call(make_female_gridlines()
-					.tickSize(-pyramid_height)
-					.tickFormat('')
-				);
-			
 			// year axis
 			var scale_year = d3.scaleLinear()
 				.domain(domain_year)
@@ -186,47 +148,150 @@
 			// add the bars
 			var bars = svg.append('g')
 				.attr('class', 'pyramid population');
-				
-			function draw_bars(current_year, animate) {
-				
-				var filtered_data = data.filter(function(d) {
-					return d.year === current_year;
-				});
-				
-				var	if_male = d => d.gender === 'M',
-					x_pos = d => {
-						return if_male(d)
-							? cx - gutter - scale_count(d.count)
-							: cx + gutter;
-					};
-				
-				var bar = bars.selectAll('.bar').data(filtered_data);
-				
-				bar.transition()
-					.duration(animate ? 400 : 0)
-					.attr('x', d => x_pos(d))
-					.attr('width', d => scale_count(d.count));
-				
-				
-				bar.exit()
-					.remove();
-				
-				
-				bar.enter().append('rect')
-					.attr('class', d => 'bar ' + d.gender)
-					.attr('height', scale_age.bandwidth())
-					.attr('width', d => scale_count(d.count))
-					.attr('x', d => x_pos(d))
-					.attr('y', d => scale_age(d.age_5));
-				
-				var pop_total = d3.sum(filtered_data, d => d.count);
-				pop_total = d3.format(',')(pop_total);
-				
-				svg_desc.text('In ' + current_year + ', the Northern Ireland population was ' + pop_total);
-			  
-			}
 			
-			draw_bars(domain_year[1], false);
+			
+			// draw data for an indvidual lgd
+			function draw_lgd(data, current_lgd) {
+				
+				var lgd_data = data.filter(d => d.area_name === current_lgd.toLowerCase());
+				
+				
+				var domain_count = d3.extent(lgd_data, d => d.count);
+			
+				// population axes
+				scale_count = d3.scaleLinear()
+					.domain(domain_count)
+					.range([0, 250]);
+				
+				// male
+				var scale_male = d3.scaleLinear()
+					.domain(domain_count.reverse())
+					.range([0, 250]);
+					
+				var axis_male = d3.axisBottom()
+					.scale(scale_male)
+					.ticks(3)
+					.tickSize(0);
+				
+				svg.append('g')
+					.attr('class', 'axis population male')
+					.attr('transform',
+						'translate(' + (cx - 250 - gutter) + 
+								', ' + (pyramid_height + 5) + ')')
+					.call(axis_male);
+			
+				// female
+				var axis_female = d3.axisBottom()
+					.scale(scale_count)
+					.ticks(3)
+					.tickSize(0);
+				
+				svg.append('g')
+					.attr('class', 'axis population female')
+					.attr('transform',
+						'translate(' + (cx + gutter) +
+								', ' + (pyramid_height + 5) + ')')
+					.call(axis_female);
+			
+				// gridlines for count
+				function make_male_gridlines() {
+					return d3.axisBottom(scale_male)
+						.ticks(3);
+				}
+				
+				function make_female_gridlines() {
+					return d3.axisBottom(scale_count)
+						.ticks(3);
+				}
+				
+				svg.append('g')
+					.attr('class', 'grid')
+					.attr('transform',
+						'translate(' + (cx - 250 - gutter) + 
+								', ' + (pyramid_height + 5) + ')')
+					.call(make_male_gridlines()
+						.tickSize(-pyramid_height)
+						.tickFormat('')
+					);
+				
+				svg.append('g')
+					.attr('class', 'grid')
+					.attr('transform',
+						'translate(' + (cx + gutter) +
+								', ' + (pyramid_height + 5) + ')')
+					.call(make_female_gridlines()
+						.tickSize(-pyramid_height)
+						.tickFormat('')
+					);
+					
+				function draw_bars(current_year, animate) {
+					
+					var filtered_data = lgd_data.filter(function(d) {
+						return d.year === current_year;
+					});
+					
+					var	if_male = d => d.gender === 'M',
+						x_pos = d => {
+							return if_male(d)
+								? cx - gutter - scale_count(d.count)
+								: cx + gutter;
+						};
+					
+					var bar = bars.selectAll('.bar').data(filtered_data);
+					
+					bar.transition()
+						.duration(animate ? 400 : 0)
+						.attr('x', d => x_pos(d))
+						.attr('width', d => scale_count(d.count));
+					
+					
+					bar.exit()
+						.remove();
+					
+					
+					bar.enter().append('rect')
+						.attr('class', d => 'bar ' + d.gender)
+						.attr('height', scale_age.bandwidth())
+						.attr('width', d => scale_count(d.count))
+						.attr('x', d => x_pos(d))
+						.attr('y', d => scale_age(d.age_5));
+					
+					var pop_total = d3.sum(filtered_data, d => d.count);
+					pop_total = d3.format(',')(pop_total);
+					
+					svg_desc.text('In ' + current_year + ', the population of ' + current_lgd + ' was ' + pop_total);
+				
+				}
+				
+				
+				draw_bars(domain_year[1], false);
+				
+				
+				year_slider.call(d3.drag().on('start', started));
+			
+				function started() {
+					handle.attr('stroke', 'black').classed('dragging', true);
+					
+					d3.event.on('drag', dragged).on('end', ended)
+					
+					function dragged() {
+						var new_x = d3.event.x < 0 ? 0 : d3.event.x;
+						new_x = new_x > 400 ? 400 : new_x;
+						
+						handle.attr('transform', 'translate(' + new_x + ', -10) rotate(180)');
+						var new_year = Math.round(scale_year.invert(new_x));
+						draw_bars(new_year, false);
+					}
+					
+					function ended() {
+						handle.attr('stroke', 'none').classed('dragging', false);
+						var new_year = Math.round(scale_year.invert(d3.event.x));
+						draw_bars(new_year, true);
+						handle.attr('transform', 'translate(' + scale_year(new_year) + ', -10) rotate(180)');
+					}
+				}
+			}
+					
 			
 			var year_pointer = d3.symbol()
 				.type(d3.symbolTriangle)
@@ -247,40 +312,25 @@
 				.attr('fill-opacity', 1.0)
 				.attr('stroke', 'none')
 				.attr('transform',
-					  'translate(' + scale_year(domain_year[1]) + ', -10) rotate(180)')
+					  'translate(' + scale_year(domain_year[1]) + ', -10) rotate(180)')			
+		
+			var default_lgd = domain_lgd[0];
 			
+			default_lgd = default_lgd.area_name;
 			
-			year_slider.call(d3.drag().on('start', started));
+			draw_lgd(data, default_lgd);
 			
-			function started() {
-				handle.attr('stroke', 'black').classed('dragging', true);
-				
-				d3.event.on('drag', dragged).on('end', ended)
-				
-				function dragged() {
-					var new_x = d3.event.x < 0 ? 0 : d3.event.x;
-					new_x = new_x > 400 ? 400 : new_x;
-					
-					handle.attr('transform', 'translate(' + new_x + ', -10) rotate(180)');
-					var new_year = Math.round(scale_year.invert(new_x));
-					draw_bars(new_year, false);
-				}
-				
-				function ended() {
-					handle.attr('stroke', 'none').classed('dragging', false);
-					var new_year = Math.round(scale_year.invert(d3.event.x));
-					draw_bars(new_year, true);
-					handle.attr('transform', 'translate(' + scale_year(new_year) + ', -10) rotate(180)');
-				}		
-			}	
-			
-			    
+			d3.select('#lgd_selector').on('change', function(d) {
+				var lgd = this.value;
+				draw_lgd(data, lgd);
+			});	
+		    
 		}
 	</script>
 </head>
 <body>
 	<script>
-		d3.json('data/mye_ni.json').then(draw);
+		d3.json('data/mye_lgd.json').then(draw);
 	</script>
 </body>
 
