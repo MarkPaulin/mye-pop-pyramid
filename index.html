@@ -159,7 +159,8 @@
 			var axis_year = d3.axisBottom()
 				.scale(scale_year)
 				.ticks(5)
-				.tickFormat(String);
+				.tickFormat(String)
+				.tickSizeOuter(0);
 			
 			var svg_axis_year = svg.append('g')
 				.attr('class', 'axis year')
@@ -236,8 +237,11 @@
 				d3.event.on('drag', dragged).on('end', ended)
 				
 				function dragged() {
-					handle.attr('transform', 'translate(' + d3.event.x + ', -10) rotate(180)');
-					var new_year = Math.round(scale_year.invert(d3.event.x));
+					var new_x = d3.event.x < 0 ? 0 : d3.event.x;
+					new_x = new_x > 400 ? 400 : new_x;
+					
+					handle.attr('transform', 'translate(' + new_x + ', -10) rotate(180)');
+					var new_year = Math.round(scale_year.invert(new_x));
 					draw_bars(new_year, false);
 				}
 				
