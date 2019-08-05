@@ -26,8 +26,14 @@
 		.desc {
 			text-anchor: middle;
 		}
+		.slidebox {
+			fill: white;
+			fill-opacity: 0.0;
+			stroke: none;
+			stroke-width: 0px;
+		}
 	</style>
-	<script src="../d3/d3.js"></script>
+	<script src="https://d3js.org/d3.v5.js"></script>
 	<script>
 		function draw(data) {
 			'use strict';
@@ -214,6 +220,7 @@
 					.attr('y', d => scale_age(d.age_5));
 				
 				var pop_total = d3.sum(filtered_data, d => d.count);
+				pop_total = d3.format(',')(pop_total);
 				
 				svg_desc.text('In ' + current_year + ', the Northern Ireland population was ' + pop_total);
 			  
@@ -225,17 +232,28 @@
 				.type(d3.symbolTriangle)
 				.size('100');
 						
-			var handle = svg_axis_year.append('path')
+			var year_slider = svg_axis_year.append('g')
+			
+			year_slider.append('rect')
+				.attr('class', 'slidebox')
+				.attr('width', 420)
+				.attr('height', 25)
+				.attr('transform', 'translate(0, -25)');
+			
+			var handle = year_slider.append('path')
 				.attr('d', year_pointer)
+				.attr('class', 'hand')
 				.attr('fill', 'lightgrey')
+				.attr('fill-opacity', 1.0)
 				.attr('stroke', 'none')
 				.attr('transform',
-					  'translate(' + scale_year(2018) + ', -10) rotate(180)')
+					  'translate(' + scale_year(domain_year[1]) + ', -10) rotate(180)')
 			
-			handle.call(d3.drag().on('start', started));
+			
+			year_slider.call(d3.drag().on('start', started));
 			
 			function started() {
-				var handle = d3.select(this).attr('stroke', 'black').classed('dragging', true);
+				handle.attr('stroke', 'black').classed('dragging', true);
 				
 				d3.event.on('drag', dragged).on('end', ended)
 				
@@ -255,6 +273,18 @@
 					handle.attr('transform', 'translate(' + scale_year(new_year) + ', -10) rotate(180)');
 				}		
 			}
+			
+			year_slider.on('click', move_handle);
+			
+			function move_handle() {
+				var new_pos = d3.event.x + 200 - cx - gutter/2;
+				var new_year = Math.round(scale_year.invert(new_pos));
+				handle.attr('transform', 'translate(' + scale_year(new_year) + ', -10) rotate(180)');
+				
+				draw_bars(new_year, true);
+				
+				handle.raise();	
+			};
 			
 			    
 		}
