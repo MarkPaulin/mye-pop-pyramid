@@ -39,19 +39,22 @@
 			'use strict';
 			var margin = {top: 10, right: 10, bottom: 10, left: 10},
 				width = 960 - margin.left - margin.right,
-				height = 500 - margin.top - margin.bottom,
+				height = 600 - margin.top - margin.bottom,
 				gutter = 30,
-				pyramid_height = height - 105,
+				pyramid_height = height - 205,
 				domain_age = [
 								'00-04', '05-09', '10-14', '15-19',
 								'20-24', '25-29', '30-34', '35-39',
 								'40-44', '45-49', '50-54', '55-59',
 								'60-64', '65-69', '70-74', '75-79',
 								'80-84', '85-89', '90+'
-							],						
+							],
+				domain_gender = ['F', 'M'],
+				domain_ratio = [0, 1],			
 				domain_count = d3.extent(data, d => d.count),
 				domain_year = d3.extent(data, d => d.year),
-				cx = width / 2
+				cx = width / 2,
+				filtered_data = data;
 			
 			var svg = d3.select('body').append('svg')
 				.attr('width', width + margin.left + margin.right)
@@ -63,7 +66,7 @@
 			var scale_age = d3.scaleBand()
 				.domain(domain_age.reverse())
 				.range([0, pyramid_height])
-				.paddingInner(0.1);
+				.paddingInner(0.05);
 			
 			var axis_age_left = d3.axisLeft()
 				.scale(scale_age)
@@ -183,15 +186,30 @@
 			  .attr('transform',
 			        'translate(' + cx + ', ' + (pyramid_height + 50) + ')');
 			
+			// adding scales and bars for the ratio chart
+			var ratio_chart = svg.append('g')
+				.attr('transform',
+					  'translate(' + (cx - 200) + ', ' + (pyramid_height + 120) + ')');
+				
+			var scale_ratio = d3.scaleLinear()
+				.domain(domain_ratio)
+				.range([0, 400]);
+			
+			var scale_gender = d3.scaleBand()
+				.domain(domain_gender)
+				.range([0, 80])
+				.padding(0.1);
+			
+			var ratio_bars = ratio_chart.append('g')
+				.attr('class', 'ratio bars');
+			
 			// add the bars
 			var bars = svg.append('g')
 				.attr('class', 'pyramid population');
-				
+							
 			function draw_bars(current_year, animate) {
 				
-				var filtered_data = data.filter(function(d) {
-					return d.year === current_year;
-				});
+				filtered_data = data.filter(d => d.year === current_year);
 				
 				var	if_male = d => d.gender === 'M',
 					x_pos = d => {
@@ -207,10 +225,8 @@
 					.attr('x', d => x_pos(d))
 					.attr('width', d => scale_count(d.count));
 				
-				
 				bar.exit()
 					.remove();
-				
 				
 				bar.enter().append('rect')
 					.attr('class', d => 'bar ' + d.gender)
@@ -219,6 +235,10 @@
 					.attr('x', d => x_pos(d))
 					.attr('y', d => scale_age(d.age_5));
 				
+				d3.select('.pyramid.population').selectAll('rect')
+					.on('mouseover', d => mouseover(d.age_5, animate))
+					.on('mouseout', mouseout);
+				
 				var pop_total = d3.sum(filtered_data, d => d.count);
 				pop_total = d3.format(',')(pop_total);
 				
@@ -226,7 +246,45 @@
 			  
 			}
 			
-			draw_bars(domain_year[1], false);
+			function draw_ratios(current_year, animate) {
+				filtered_data = data.filter(d => d.year === current_year);
+				
+				var pop_total = d3.sum(filtered_data, d => d.count);
+				var female_total = d3.sum(filtered_data, d => d.gender === 'F' ? d.count : 0);
+				var male_total = pop_total - female_total;
+				
+				var female_ratio = female_total / pop_total;
+				var male_ratio = 1 - female_ratio;
+				
+				var ratio_data = [{'gender': 'F', 'ratio': female_ratio},
+								  {'gender': 'M', 'ratio': male_ratio}];
+				
+				var ratios = ratio_bars.selectAll('.bar').data(ratio_data);
+				
+				ratios.transition()
+					.duration(animate ? 400 : 0)
+					.attr('width', d => scale_ratio(d.ratio));
+				
+				ratios.exit()
+					.remove();
+				
+				ratios.enter()
+					.append('rect')
+					.attr('class', d => 'bar ' + d.gender)
+					.attr('x', 0)
+					.attr('y', d => scale_gender(d.gender))
+					.attr('height', scale_gender.bandwidth())
+					.attr('width', d => scale_ratio(d.ratio));
+			}
+			
+			function draw_year(current_year, animate) {
+				draw_bars(current_year, animate);
+				draw_ratios(current_year, animate);
+			}
+			
+			var current_year = domain_year[1];
+			
+			draw_year(current_year, false);
 			
 			var year_pointer = d3.symbol()
 				.type(d3.symbolTriangle)
@@ -262,19 +320,58 @@
 					new_x = new_x > 400 ? 400 : new_x;
 					
 					handle.attr('transform', 'translate(' + new_x + ', -10) rotate(180)');
-					var new_year = Math.round(scale_year.invert(new_x));
-					draw_bars(new_year, false);
+					current_year = Math.round(scale_year.invert(new_x));
+					draw_year(current_year, false);
 				}
 				
 				function ended() {
 					handle.attr('stroke', 'none').classed('dragging', false);
-					var new_year = Math.round(scale_year.invert(d3.event.x));
-					draw_bars(new_year, true);
-					handle.attr('transform', 'translate(' + scale_year(new_year) + ', -10) rotate(180)');
+					current_year = Math.round(scale_year.invert(d3.event.x));
+					draw_year(current_year, true);
+					handle.attr('transform', 'translate(' + scale_year(current_year) + ', -10) rotate(180)');
 				}		
 			}	
 			
-			    
+			function mouseover(age_band) {
+				var pyramid_bars = d3.select('.pyramid').selectAll('rect');
+				
+				pyramid_bars.filter(d => d.age_5 != age_band).style('opacity', 0.5);
+				
+				var band_data = filtered_data.filter(d => d.age_5 === age_band);
+				
+				var female_count = d3.sum(band_data.filter(d => d.gender === 'F'), d => d.count);
+				var male_count = d3.sum(band_data.filter(d => d.gender === 'M'), d => d.count);
+				
+				var female_ratio = female_count / (female_count + male_count);
+				var male_ratio = 1 - female_ratio;
+				
+				var ratio_data = [{'gender': 'F', 'ratio': female_ratio},
+								  {'gender': 'M', 'ratio': male_ratio}];
+				
+				var ratios = ratio_bars.selectAll('.bar').data(ratio_data);
+				
+				ratios.transition()
+					.duration(400)
+					.attr('width', d => scale_ratio(d.ratio));
+				
+				ratios.exit()
+					.remove();
+				
+				ratios.enter()
+					.append('rect')
+					.attr('class', d => 'bar ' + d.gender)
+					.attr('x', 0)
+					.attr('y', d => scale_gender(d.gender))
+					.attr('height', scale_gender.bandwidth())
+					.attr('width', d => scale_ratio(d.ratio));
+
+				
+			};
+			
+			function mouseout() {
+				d3.select('.pyramid').selectAll('rect').style('opacity', 1.0);
+				draw_ratios(current_year, true);
+			};	    
 		}
 	</script>
 </head>
