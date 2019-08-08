@@ -11,7 +11,7 @@
 			shape-rendering: crispEdges;
 		}
 		rect.F {
-			fill: #ff3366;
+			fill: #ffaa55;
 			shape-rendering: crispEdges;
 		}
 		.grid line {
@@ -53,10 +53,10 @@
 				cx = width / 2,
 				domain_lgd = [
 								{'area_name': 'Northern Ireland'},
-								{'area_name': 'Antrim and Newonabbey'},
+								{'area_name': 'Antrim and Newtownabbey'},
 								{'area_name': 'Ards and North Down'},
-								{'area_name': 'Armagh City and Banridge'},
-								{'area_name': 'Befast'},
+								{'area_name': 'Armagh City, Banbridge and Craigavon'},
+								{'area_name': 'Belfast'},
 								{'area_name': 'Causeway Coast and Glens'},
 								{'area_name': 'Derry City and Strabane'},
 								{'area_name': 'Fermanagh and Omagh'},
@@ -65,8 +65,6 @@
 								{'area_name': 'Mid Ulster'},
 								{'area_name': 'Newry, Mourne and Down'}
 							];
-			
-			console.log(domain_lgd, d => d.area_name.toLowerCase());	
 			
 			var selector = d3.select('body')
 				.append('select')
@@ -84,8 +82,37 @@
 			  .append('g')
 				.attr('transform', 'translate(' + margin.top + ', ' + margin.top + ')');
 			
-			// initiate scale_count for later
-			var scale_count;
+			// initiate x scales for later
+			var scale_count = d3.scaleLinear()
+					.range([0, 250]);
+				
+			var axis_female = d3.axisBottom()
+			  .scale(scale_count)
+			  .ticks(3)
+			  .tickSize(0);
+			
+			svg.append('g')
+					.attr('class', 'axis population female')
+					.attr('transform',
+						'translate(' + (cx + gutter) +
+								', ' + (pyramid_height + 5) + ')')
+					.call(axis_female); 
+				
+			var scale_male = d3.scaleLinear()
+					.range([0, 250]);
+				
+			var axis_male = d3.axisBottom()
+					.scale(scale_male)
+					.ticks(3)
+					.tickSize(0);
+			
+			svg.append('g')
+					.attr('class', 'axis population male')
+					.attr('transform',
+						'translate(' + (cx - 250 - gutter) + 
+								', ' + (pyramid_height + 5) + ')')
+					.call(axis_male);
+			
 			
 			// age axis
 			var scale_age = d3.scaleBand()
@@ -149,6 +176,30 @@
 			var bars = svg.append('g')
 				.attr('class', 'pyramid population');
 			
+			// functions for drawing gridlines
+			function make_male_gridlines() {
+					return d3.axisBottom(scale_male)
+						.ticks(3);
+				}
+				
+			// gridlines for count
+			svg.append('g')
+				.attr('class', 'grid male')
+				.attr('transform',
+					'translate(' + (cx - 250 - gutter) + 
+							', ' + (pyramid_height + 5) + ')')	
+				
+			function make_female_gridlines() {
+					return d3.axisBottom(scale_count)
+						.ticks(3);
+				}
+			
+			svg.append('g')
+				.attr('class', 'grid female')
+				.attr('transform',
+					'translate(' + (cx + gutter) +
+							', ' + (pyramid_height + 5) + ')')
+			
 			
 			// draw data for an indvidual lgd
 			function draw_lgd(data, current_lgd) {
@@ -159,66 +210,36 @@
 				var domain_count = d3.extent(lgd_data, d => d.count);
 			
 				// population axes
-				scale_count = d3.scaleLinear()
-					.domain(domain_count)
-					.range([0, 250]);
+				// female
+				scale_count.domain(domain_count);
+				
+				d3.select('.axis.population.female')
+				  .transition()
+				  .duration(1000)
+				  .call(axis_female);
+			
 				
 				// male
-				var scale_male = d3.scaleLinear()
-					.domain(domain_count.reverse())
-					.range([0, 250]);
+				scale_male.domain(domain_count.reverse());
 					
-				var axis_male = d3.axisBottom()
-					.scale(scale_male)
-					.ticks(3)
-					.tickSize(0);
 				
-				svg.append('g')
-					.attr('class', 'axis population male')
-					.attr('transform',
-						'translate(' + (cx - 250 - gutter) + 
-								', ' + (pyramid_height + 5) + ')')
-					.call(axis_male);
+				d3.select('.axis.population.male')
+				  .transition()
+				  .duration(1000)
+				  .call(axis_male);
 			
-				// female
-				var axis_female = d3.axisBottom()
-					.scale(scale_count)
-					.ticks(3)
-					.tickSize(0);
 				
-				svg.append('g')
-					.attr('class', 'axis population female')
-					.attr('transform',
-						'translate(' + (cx + gutter) +
-								', ' + (pyramid_height + 5) + ')')
-					.call(axis_female);
-			
-				// gridlines for count
-				function make_male_gridlines() {
-					return d3.axisBottom(scale_male)
-						.ticks(3);
-				}
-				
-				function make_female_gridlines() {
-					return d3.axisBottom(scale_count)
-						.ticks(3);
-				}
-				
-				svg.append('g')
-					.attr('class', 'grid')
-					.attr('transform',
-						'translate(' + (cx - 250 - gutter) + 
-								', ' + (pyramid_height + 5) + ')')
+				d3.select('.grid.male')
+				  .transition()
+				  .duration(1000)
 					.call(make_male_gridlines()
 						.tickSize(-pyramid_height)
 						.tickFormat('')
 					);
 				
-				svg.append('g')
-					.attr('class', 'grid')
-					.attr('transform',
-						'translate(' + (cx + gutter) +
-								', ' + (pyramid_height + 5) + ')')
+				d3.select('.grid.female')
+				  .transition()
+				  .duration(1000)
 					.call(make_female_gridlines()
 						.tickSize(-pyramid_height)
 						.tickFormat('')
@@ -264,7 +285,7 @@
 				}
 				
 				
-				draw_bars(domain_year[1], false);
+				draw_bars(year_selected, true);
 				
 				
 				year_slider.call(d3.drag().on('start', started));
@@ -276,22 +297,29 @@
 					
 					function dragged() {
 						var new_x = d3.event.x < 0 ? 0 : d3.event.x;
+						
 						new_x = new_x > 400 ? 400 : new_x;
 						
 						handle.attr('transform', 'translate(' + new_x + ', -10) rotate(180)');
-						var new_year = Math.round(scale_year.invert(new_x));
-						draw_bars(new_year, false);
+						
+						year_selected = Math.round(scale_year.invert(new_x));
+						
+						draw_bars(year_selected, false);
 					}
 					
 					function ended() {
 						handle.attr('stroke', 'none').classed('dragging', false);
-						var new_year = Math.round(scale_year.invert(d3.event.x));
-						draw_bars(new_year, true);
-						handle.attr('transform', 'translate(' + scale_year(new_year) + ', -10) rotate(180)');
+						
+						year_selected = Math.round(scale_year.invert(d3.event.x));
+						
+						draw_bars(year_selected, true);
+						
+						handle.attr('transform', 'translate(' + scale_year(year_selected) + ', -10) rotate(180)');                      
 					}
 				}
 			}
 					
+			var year_selected = domain_year[1];
 			
 			var year_pointer = d3.symbol()
 				.type(d3.symbolTriangle)
@@ -311,19 +339,20 @@
 				.attr('fill', 'lightgrey')
 				.attr('fill-opacity', 1.0)
 				.attr('stroke', 'none')
-				.attr('transform',
-					  'translate(' + scale_year(domain_year[1]) + ', -10) rotate(180)')			
+				.attr('transform', d => 
+					  'translate(' + scale_year(year_selected) + ', -10) rotate(180)');
 		
 			var default_lgd = domain_lgd[0];
 			
-			default_lgd = default_lgd.area_name;
+			var default_lgd_name = default_lgd.area_name;
 			
-			draw_lgd(data, default_lgd);
+			draw_lgd(data, default_lgd_name);
 			
 			d3.select('#lgd_selector').on('change', function(d) {
 				var lgd = this.value;
+				var year = d3.select('path.hand').attr('transform')
 				draw_lgd(data, lgd);
-			});	
+			});
 		    
 		}
 	</script>

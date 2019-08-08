@@ -32,6 +32,9 @@
 			stroke: none;
 			stroke-width: 0px;
 		}
+		.label.ratio text {
+		  text-size: 8pt;
+		}
 	</style>
 	<script src="https://d3js.org/d3.v5.js"></script>
 	<script>
@@ -203,6 +206,9 @@
 			var ratio_bars = ratio_chart.append('g')
 				.attr('class', 'ratio bars');
 			
+			var ratio_text = ratio_chart.append('g')
+			  .attr('class', 'ratio text');
+			
 			// add the bars
 			var bars = svg.append('g')
 				.attr('class', 'pyramid population');
@@ -256,8 +262,10 @@
 				var female_ratio = female_total / pop_total;
 				var male_ratio = 1 - female_ratio;
 				
-				var ratio_data = [{'gender': 'F', 'ratio': female_ratio},
-								  {'gender': 'M', 'ratio': male_ratio}];
+				var ratio_data = [
+				  {'gender': 'F', 'ratio': female_ratio, 'count': female_total},
+					{'gender': 'M', 'ratio': male_ratio, 'count': male_total}
+				];
 				
 				var ratios = ratio_bars.selectAll('.bar').data(ratio_data);
 				
@@ -275,6 +283,30 @@
 					.attr('y', d => scale_gender(d.gender))
 					.attr('height', scale_gender.bandwidth())
 					.attr('width', d => scale_ratio(d.ratio));
+				
+				var update_text = ratio_text.selectAll('text').data(ratio_data);
+				
+				update_text.transition()
+					.duration(animate ? 400 : 0)
+				  .attr('x', d => scale_ratio(d.ratio) + 10)
+          .text(d => (d.gender === 'F' ? 'Females: ' : 'Males: ')
+                      + d3.format(',')(d.count) + ' ('
+                      + d3.format(".1%")(d.ratio) + ')');
+                      
+				update_text.exit().remove();
+				
+				update_text.enter()
+				  .append('text')
+				  .attr('text-anchor', 'left')
+				  .attr('x', d => scale_ratio(d.ratio) + 10)
+				  .attr('y', d => (scale_gender(d.gender) + scale_gender.bandwidth() / 2))
+				  .attr('dy', '0.5em')
+				  .text(d => (d.gender === 'F' ? 'Females: ' : 'Males: ')
+                      + d3.format(',')(d.count) + ' ('
+                      + d3.format(".1%")(d.ratio) + ')');
+				
+				
+				
 			}
 			
 			function draw_year(current_year, animate) {
@@ -345,8 +377,9 @@
 				var female_ratio = female_count / (female_count + male_count);
 				var male_ratio = 1 - female_ratio;
 				
-				var ratio_data = [{'gender': 'F', 'ratio': female_ratio},
-								  {'gender': 'M', 'ratio': male_ratio}];
+				var ratio_data = [
+				  {'gender': 'F', 'ratio': female_ratio, 'count': female_count},
+					{'gender': 'M', 'ratio': male_ratio, 'count': male_count}];
 				
 				var ratios = ratio_bars.selectAll('.bar').data(ratio_data);
 				
@@ -364,6 +397,30 @@
 					.attr('y', d => scale_gender(d.gender))
 					.attr('height', scale_gender.bandwidth())
 					.attr('width', d => scale_ratio(d.ratio));
+				
+				var update_text = ratio_text.selectAll('text').data(ratio_data);
+				
+				update_text.transition()
+				  .duration(400)
+				  .attr('x', d => scale_ratio(d.ratio) + 10)
+				  .text(d => (d.gender === 'F' ? 'Females ' : 'Males ')
+				              + age_band + ': ' 
+				              + d3.format(',')(d.count) + ' ('
+                      + d3.format('.1%')(d.ratio) + ')');
+				  
+				update_text.exit().remove();
+				
+				update_text.enter()
+				  .append('text')
+				  .attr('class', 'ratio label')
+				  .attr('text-anchor', 'left')
+				  .attr('x', d => scale_ratio(d.ratio) + 10)
+				  .attr('y', d => (scale_gender(d.gender) + scale_gender.bandwidth() / 2))
+				  .attr('dy', '0.5em')
+				  .text(d => (d.gender === 'F' ? 'Females' : 'Males')
+				              + age_band + ': ' 
+                      + d3.format(',')(d.count) + ' ('
+                      + d3.format('.1%')(d.ratio) + ')');
 
 				
 			};
