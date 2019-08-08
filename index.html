@@ -32,8 +32,8 @@
 			stroke: none;
 			stroke-width: 0px;
 		}
-		.label.ratio text {
-		  text-size: 8pt;
+		text.ratio {
+		  font-size: 12px;
 		}
 	</style>
 	<script src="https://d3js.org/d3.v5.js"></script>
@@ -200,7 +200,7 @@
 			
 			var scale_gender = d3.scaleBand()
 				.domain(domain_gender)
-				.range([0, 80])
+				.range([0, 50])
 				.padding(0.1);
 			
 			var ratio_bars = ratio_chart.append('g')
@@ -288,6 +288,8 @@
 				
 				update_text.transition()
 					.duration(animate ? 400 : 0)
+				  .attr('class', 'ratio label')
+				  .attr('text-anchor', 'left')
 				  .attr('x', d => scale_ratio(d.ratio) + 10)
           .text(d => (d.gender === 'F' ? 'Females: ' : 'Males: ')
                       + d3.format(',')(d.count) + ' ('
@@ -297,6 +299,7 @@
 				
 				update_text.enter()
 				  .append('text')
+				  .attr('class', 'ratio label')
 				  .attr('text-anchor', 'left')
 				  .attr('x', d => scale_ratio(d.ratio) + 10)
 				  .attr('y', d => (scale_gender(d.gender) + scale_gender.bandwidth() / 2))
@@ -402,6 +405,8 @@
 				
 				update_text.transition()
 				  .duration(400)
+				  .attr('class', 'ratio label')
+				  .attr('text-anchor', 'left')
 				  .attr('x', d => scale_ratio(d.ratio) + 10)
 				  .text(d => (d.gender === 'F' ? 'Females ' : 'Males ')
 				              + age_band + ': ' 
