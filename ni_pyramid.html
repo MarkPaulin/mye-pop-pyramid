@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+	body {
+		font-family: sans-serif;
+	}
+	rect.M {
+		fill: #3388ee;
+		shape-rendering: crispEdges;
+	}
+	rect.F {
+		fill: #ff3366;
+		shape-rendering: crispEdges;
+	}
+	.grid line {
+		stroke: lightgrey;
+	}
+	.grid path {
+		stroke: none;
+	}
+	.axis.age path, .axis.population path {
+		stroke: none;
+	}
+	.desc {
+		text-anchor: middle;
+	}
+	.slidebox {
+		fill: white;
+		fill-opacity: 0.0;
+		stroke: none;
+		stroke-width: 0px;
+	}
+	text.ratio {
+	  font-size: 12px;
+	}
+</style>
+<script src="https://d3js.org/d3.v5.js"></script>
+<script>
+	"use strict";
+	
+	function draw(data) {
+		// variables for size of svg
+		var margin = {top: 10, right: 10, bottom: 10, left: 10},
+			width = 960 - margin.left - margin.right,
+			height = 600 - margin.top - margin.bottom,
+			gutter = 30,
+			pyramid_height = height - 205,
+			cx = width / 2;
+		
+		// data related variables
+		var filtered_data = data,
+			domain_age = d3.map(data, d => d.age_5).keys(),
+			domain_gender = d3.map(data, d => d.gender).keys(),
+			domain_count = [0, d3.max(data, d => d.count)],
+			domain_year = d3.extent(data, d => d.year),
+			domain_ratio = [0, 1];
+		
+		// start with most recent year
+		// check: can this data be accessed directly? opendata NI?
+		var current_year = domain_year[1];
+		
+		var svg = d3.select('body').append('svg')
+			.attr('width', width + margin.left + margin.right)
+			.attr('height', height + margin.top + margin.bottom)
+			.append('g')
+				.attr('transform',
+					  `translate(${margin.left}, ${margin.top})`);
+		
+		// axes -----------------------------------------------------
+		
+		// age axes
+		var scale_age = d3.scaleBand()
+			.domain(domain_age.reverse())
+			.range([0, pyramid_height])
+			.paddingInner(0.05);
+		
+		var axis_age_left = d3.axisLeft()
+			.scale(scale_age)
+			.tickSize(0);
+		
+		var axis_age_right = d3.axisRight()
+			.scale(scale_age)
+			.tickFormat('')
+			.tickSize(0);
+		
+		var axis_age_left_svg = svg.append('g')
+			.attr('class', 'axis age')
+			.attr('transform', `translate(${cx + gutter/2 + 10}, 0)`)
+			.call(axis_age_left);
+		
+		var axis_age_right_svg = svg.append('g')
+			.attr('class', 'axis age')
+			.attr('transform', `translate(${cx - gutter/2 - 10}, 0)`)
+			.call(axis_age_right);
+		
+		axis_age_left_svg.append('text')
+			.attr('dy', '.3em')
+			.text('Age');
+		
+		axis_age_left_svg.selectAll('text')
+			.attr('x', - gutter / 2 - 10)
+			.style('text-anchor', 'middle');
+		
+		// population axes
+		var scale_count = d3.scaleLinear()
+			.domain(domain_count)
+			.range([0, 250]);
+		
+		var scale_male = d3.scaleLinear()
+			.domain(domain_count.reverse())
+			.range([0, 250]);
+		
+		var axis_female = d3.axisBottom()
+			.scale(scale_count)
+			.ticks(5)
+			.tickSize(0);
+		
+		svg.append('g')
+			.attr('class', 'axis population female')
+			.attr('transform',
+				  `translate(${cx + gutter}, ${pyramid_height + 5})`)
+			.call(axis_female);
+		
+		var axis_male = d3.axisBottom()
+			.scale(scale_male)
+			.ticks(5)
+			.tickSize(0);
+		
+		svg.append('g')
+			.attr('class', 'axis population male')
+			.attr('transform',
+				  `translate(${cx - gutter - 250}, ${pyramid_height + 5})`)
+			.call(axis_male);
+		
+		// gridlines
+		svg.append('g')
+			.attr('class', 'grid')
+			.attr('transform',
+				  `translate(${cx + gutter}, ${pyramid_height + 5})`)
+			.call(d3.axisBottom(scale_count).tickSize(-pyramid_height).tickFormat('').ticks(5));
+			
+		svg.append('g')
+			.attr('class', 'grid')
+			.attr('transform',
+				  `translate(${cx - gutter - 250}, ${pyramid_height + 5})`)
+			.call(d3.axisBottom(scale_male).tickSize(-pyramid_height).tickFormat('').ticks(5));
+		
+		// add the bars
+		var bars = svg.append('g')
+			.attr('class', 'population pyramid');
+		
+		
+		// year
+		var scale_year = d3.scaleLinear()
+			.domain(domain_year)
+			.range([0, 400]);
+		
+		var axis_year = d3.axisBottom()
+			.scale(scale_year)
+			.ticks(5)
+			.tickFormat(String)
+			.tickSizeOuter(0);
+		
+		var svg_axis_year = svg.append('g')
+			.attr('class', 'axis year')
+			.attr('transform',
+				  `translate(${cx - 200}, ${pyramid_height + 85})`)
+			.call(axis_year);
+		
+		// year pointer
+		var year_pointer = d3.symbol()
+			.type(d3.symbolTriangle)
+			.size('100');
+		
+		var year_slider = svg_axis_year.append('g');
+		
+		year_slider.append('rect')
+			.attr('class', 'slidebox')
+			.attr('width', 420)
+			.attr('height', 25)
+			.attr('transform', 'translate(0, -25)');
+		
+		var handle = year_slider.append('path')
+			.attr('d', year_pointer)
+			.attr('class', 'hand')
+			.attr('fill', 'lightgrey')
+			.attr('fill-opacity', 1.0)
+			.attr('stroke', 'none')
+			.attr('transform',
+				  `translate(${scale_year(current_year)}, -10) rotate(180)`);
+		
+		year_slider.call(d3.drag().on('start', started));
+		
+		// ratio
+		var ratio_chart = svg.append('g')
+			.attr('transform',
+				  `translate(${cx - 200}, ${pyramid_height + 120})`);
+		
+		var scale_ratio = d3.scaleLinear()
+			.domain(domain_ratio)
+			.range([0, 400]);
+		
+		var scale_gender = d3.scaleBand()
+			.domain(domain_gender)
+			.range([0, 50])
+			.padding(0.1);
+		
+		// ratio bars
+		var ratio_bars = ratio_chart.append('g').
+			attr('class', 'ratio bars');
+		
+		
+		
+		draw_pyramid(current_year, true, '');
+				
+
+		function draw_pyramid(year, animate, band) {
+		}
+		
+		function draw_ratios(year, animate, band) {
+		}
+		
+		function mouseover(band) {
+		}
+		
+		function mouseout(band) {
+		}
+		
+		function started() {
+			handle.attr('stroke', 'black');
+			
+			d3.event.on('drag', dragging).on('end', ended);
+			
+			function dragging() {
+				var x_new = d3.event.x < 0 ? 0 : d3.event.x;
+				x_new = x_new > 400 ? 400 : x_new;
+				
+				handle.attr('transform',
+						    `translate(${x_new}, -10) rotate(180)`);
+				
+				current_year = Math.round(scale_year.invert(x_new));
+				
+			}
+			
+			function ended() {
+				handle.attr('stroke', 'none');
+				
+				var x_final = scale_year(current_year);
+				
+				handle.attr('transform',
+						    `translate(${x_final}, -10) rotate(180)`);
+			}
+		}
+		
+		function draw_year(year, animate) {
+			draw_pyramid(year, animate);
+			draw_ratios(year, animate);
+		}
+	};	
+	
+</script>
+
+</head>
+<body>
+<script>
+	d3.json('data/mye_ni.json').then(draw);
+</script>
+</body>
+
+</html>
