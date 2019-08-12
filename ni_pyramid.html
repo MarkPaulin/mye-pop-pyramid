@@ -148,11 +148,19 @@
 			.attr('class', 'grid')
 			.attr('transform',
 				  `translate(${cx - gutter - 250}, ${pyramid_height + 5})`)
-			.call(d3.axisBottom(scale_male).tickSize(-pyramid_height).tickFormat('').ticks(5));
+			.call(d3.axisBottom(scale_male).tickSize(-pyramid_height - 10).tickFormat('').ticks(5));
 		
 		// add the bars
 		var bars = svg.append('g')
 			.attr('class', 'population pyramid');
+		
+		// add the year label
+		var year_label = svg.append('text')
+			.attr('class', 'year label')
+			.attr('transform',
+				  `translate(${cx}, ${pyramid_height + 50})`)
+			.attr('text-anchor', 'middle')
+			.text(current_year);
 		
 		
 		// year
@@ -203,7 +211,7 @@
 		
 		var scale_ratio = d3.scaleLinear()
 			.domain(domain_ratio)
-			.range([0, 400]);
+			.range([0, 200]);
 		
 		var scale_gender = d3.scaleBand()
 			.domain(domain_gender)
@@ -256,6 +264,9 @@
 				.on('mouseover', d => mouseover(d.age_5))
 				.on('mouseout', d => mouseout(d.age_5))
 				.on('click', d => clicked(d.age_5));
+			
+			year_label.transition()
+				.text(year);			
 			
 		}
 		
