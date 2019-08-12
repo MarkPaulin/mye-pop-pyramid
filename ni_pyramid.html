@@ -60,7 +60,9 @@
 		
 		// start with most recent year
 		// check: can this data be accessed directly? opendata NI?
-		var current_year = domain_year[1];
+		var current_year = domain_year[1],
+			current_band  = '',
+			any_clicked = false;
 		
 		var svg = d3.select('body').append('svg')
 			.attr('width', width + margin.left + margin.right)
@@ -214,19 +216,113 @@
 		
 		
 		
-		draw_pyramid(current_year, true, '');
+		draw_year(current_year, true, current_band);
 				
 
 		function draw_pyramid(year, animate, band) {
+			var if_male = d => d.gender === 'M',
+				x_pos = d => {
+					return if_male(d)
+						? cx - gutter - scale_count(d.count)
+						: cx + gutter;
+					},
+				fill_op = d => 1;
+			
+			if (band != '') {
+				fill_op = d => d.age_5 === band ? 1 : 0.5;
+			}
+			
+			var bar = bars.selectAll('.bar').data(filtered_data);
+			
+			bar.transition()
+				.duration(animate ? 400 : 0)
+				.attr('x', d => x_pos(d))
+				.attr('width', d => scale_count(d.count));
+			
+			bar.exit()
+				.remove();
+			
+			bar.enter()
+				.append('rect')
+				.attr('class', d => 'bar ' + d.gender)
+				.attr('height', scale_age.bandwidth)
+				.attr('width', d => scale_count(d.count))
+				.attr('x', d => x_pos(d))
+				.attr('y', d => scale_age(d.age_5))
+				.attr('fill-opacity', d => fill_op(d));
+			
+			d3.select('.pyramid.population')
+				.selectAll('rect')
+				.on('mouseover', d => mouseover(d.age_5))
+				.on('mouseout', d => mouseout(d.age_5))
+				.on('click', d => clicked(d.age_5));
+			
 		}
 		
 		function draw_ratios(year, animate, band) {
+			
+			var year_data = data.filter(d => d.year === year);
+
+			if (band != '') {
+				year_data = year_data.filter(d => d.age_5 === band);
+			}
+			
+			var total = d3.sum(year_data, d => d.count),
+				female_total = d3.sum(year_data.filter(d => d.gender === 'F'), d => d.count),
+				male_total = total - female_total;
+			
+			var ratio_data = [
+				{gender: 'F', count: female_total, ratio: female_total/total},
+				{gender: 'M', count: male_total, ratio: male_total/total}
+				];
+			
+			var ratio_bar = ratio_bars.selectAll('.bar').data(ratio_data);
+			
+			ratio_bar.transition()
+				.duration(animate ? 400 : 0)
+				.attr('width', d => scale_ratio(d.ratio));
+			
+			ratio_bar.exit()
+				.remove();
+			
+			ratio_bar.enter()
+				.append('rect')
+				.attr('class', d => 'ratio bar ' + d.gender)
+				.attr('height', scale_gender.bandwidth())
+				.attr('y', d => scale_gender(d.gender))
+				.attr('x', 0)
+				.attr('width', d => scale_ratio(d.ratio));
 		}
 		
 		function mouseover(band) {
+			
+			if (!any_clicked) {
+				d3.select('.pyramid.population')
+					.selectAll('rect')
+					.attr('fill-opacity', d => d.age_5 === band ? 1 : 0.5);
+					
+				draw_ratios(current_year, true, band);
+			}
+			
 		}
 		
 		function mouseout(band) {
+			
+			if (!any_clicked) {
+				d3.select('.pyramid.population')
+					.selectAll('rect')
+					.attr('fill-opacity', 1);
+				
+				draw_ratios(current_year, true, '');
+			}
+			
+		}
+		
+		function clicked(band) {
+			current_band = !any_clicked ? band : '';
+			
+			any_clicked = !any_clicked
+			mouseover(band)
 		}
 		
 		function started() {
@@ -243,21 +339,30 @@
 				
 				current_year = Math.round(scale_year.invert(x_new));
 				
+				draw_year(current_year, false, current_band);
 			}
 			
 			function ended() {
 				handle.attr('stroke', 'none');
 				
-				var x_final = scale_year(current_year);
+				var x_final = d3.event.x < 0 ? 0 : d3.event.x;
+				x_final = x_final > 400 ? 400 : x_final;
 				
+				current_year = Math.round(scale_year.invert(x_final));
+				
+				x_final = scale_year(current_year);
+								
 				handle.attr('transform',
 						    `translate(${x_final}, -10) rotate(180)`);
+								
+				draw_year(current_year, true, current_band);
 			}
 		}
 		
-		function draw_year(year, animate) {
-			draw_pyramid(year, animate);
-			draw_ratios(year, animate);
+		function draw_year(year, animate, band) {
+			filtered_data = data.filter(d => d.year === year);
+			draw_pyramid(year, animate, band);
+			draw_ratios(year, animate, band);
 		}
 	};	
 	
