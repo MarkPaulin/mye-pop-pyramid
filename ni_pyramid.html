@@ -304,7 +304,7 @@
 				.attr('class', d => 'ratio bar ' + d.gender)
 				.attr('height', scale_gender.bandwidth())
 				.attr('y', d => scale_gender(d.gender))
-				.attr('x', 0)
+				.attr('x', 200)
 				.attr('width', d => scale_ratio(d.ratio));
 			
 			var update_text = ratio_text.selectAll('.text').data(ratio_data);
@@ -318,16 +318,14 @@
 				var label = gen + bnd + ': ' + cnt + ' (' + pct + ')';
 				return label;
 			}
-			
-			console.log(ratio_data);
-			
+						
 			update_text.transition()
 				.duration(animate ? 400 : 0)
 				.text(d => generate_label(d))
 				.attr('y', d => scale_gender(d.gender) + scale_gender.bandwidth()/2)
-				.attr('x', d => scale_ratio(d.ratio) + 10)
+				.attr('x', 190)
 				.attr('dy', '0.3em')
-				.attr('text-anchor', 'left');
+				.attr('text-anchor', 'end');
 			
 			update_text.exit().remove();
 			
@@ -336,9 +334,9 @@
 				.attr('class', 'ratio text')
 				.text(d => generate_label(d))
 				.attr('y', d => scale_gender(d.gender) + scale_gender.bandwidth()/2)
-				.attr('x', d => scale_ratio(d.ratio) + 10)
+				.attr('x', 190)
 				.attr('dy', '0.3em')
-				.attr('text-anchor', 'left');
+				.attr('text-anchor', 'end');
 					
 		}
 		
