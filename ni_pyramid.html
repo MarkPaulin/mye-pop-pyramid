@@ -222,6 +222,9 @@
 		var ratio_bars = ratio_chart.append('g').
 			attr('class', 'ratio bars');
 		
+		var ratio_text = ratio_chart.append('g')
+			.attr('class', 'ratio text');
+		
 		
 		
 		draw_year(current_year, true, current_band);
@@ -303,6 +306,40 @@
 				.attr('y', d => scale_gender(d.gender))
 				.attr('x', 0)
 				.attr('width', d => scale_ratio(d.ratio));
+			
+			var update_text = ratio_text.selectAll('.text').data(ratio_data);
+			
+			var generate_label = function(s) {
+				var gen = (s.gender === 'F' ? 'Females' : 'Males');
+				var bnd = (band === '' ? '' : ' ' + band);
+				var cnt = d3.format(',')(s.count);
+				var pct = d3.format('.1%')(s.ratio);
+				
+				var label = gen + bnd + ': ' + cnt + ' (' + pct + ')';
+				return label;
+			}
+			
+			console.log(ratio_data);
+			
+			update_text.transition()
+				.duration(animate ? 400 : 0)
+				.text(d => generate_label(d))
+				.attr('y', d => scale_gender(d.gender) + scale_gender.bandwidth()/2)
+				.attr('x', d => scale_ratio(d.ratio) + 10)
+				.attr('dy', '0.3em')
+				.attr('text-anchor', 'left');
+			
+			update_text.exit().remove();
+			
+			update_text.enter()
+				.append('text')
+				.attr('class', 'ratio text')
+				.text(d => generate_label(d))
+				.attr('y', d => scale_gender(d.gender) + scale_gender.bandwidth()/2)
+				.attr('x', d => scale_ratio(d.ratio) + 10)
+				.attr('dy', '0.3em')
+				.attr('text-anchor', 'left');
+					
 		}
 		
 		function mouseover(band) {
