@@ -1,0 +1,32 @@
+body {
+  font-family: sans-serif;
+}
+rect.M {
+  fill: #3388ee;
+  shape-rendering: crispEdges;
+}
+rect.F {
+  fill: #ff3366;
+  shape-rendering: crispEdges;
+}
+.grid line {
+  stroke: lightgrey;
+}
+.grid path {
+  stroke: none;
+}
+.axis.age path, .axis.population path {
+  stroke: none;
+}
+.desc {
+  text-anchor: middle;
+}
+.slidebox {
+  fill: white;
+  fill-opacity: 0.0;
+  stroke: none;
+  stroke-width: 0px;
+}
+text.ratio {
+  font-size: 12px;
+}
